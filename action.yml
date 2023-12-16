@@ -1,0 +1,122 @@
+name: 'Prepare MacOS system'
+description: 'Prepare system for building R packages'
+inputs:
+  version:
+    description: 'Version of R'
+    default: 'release'
+    required: false
+  fortran:
+    description: 'Package uses Fortran'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        sudo mkdir -p /opt
+        sudo chown $USER /opt
+    - name: Cache tools
+      uses: actions/cache@v3
+      with:
+        path: |
+          /opt/X11
+          /opt/gfortran
+          /opt/R/x86_64
+        key: ${{ runner.os }}-${{ inputs.version }}
+    - shell: bash
+      run: |
+        echo "::group::Removing Homebrew"
+        cp $(which gtar git-lfs rustup-init) .
+        brew unlink $(brew list --formula) || true
+        sudo rm -vf $(which brew)
+        sudo mv /usr/local/Homebrew /usr/local/oldhomebrew
+        sudo mv /usr/local/Cellar /usr/local/oldcellar
+        cp -f gtar git-lfs rustup-init /usr/local/bin/
+        hash -r
+        echo "Done removing homebrew!"
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        cargo --version
+        echo "::endgroup::"
+
+    - shell: bash
+      run: |
+        echo "::group::Installing static zstd"
+        echo "Reinstalling static zstd (for github actions cache)"
+        curl --retry 3 -fLO https://github.com/autobrew/bundler/releases/download/zstd-1.5.5/zstd-1.5.5-universal.tar.xz
+        sudo tar -xf zstd-1.5.5-universal.tar.xz --strip 1 -C /usr/local/
+        rm -f zstd-1.5.5-universal.tar.xz
+        zstd --version
+        echo "::endgroup::"
+
+    - shell: bash
+      run: |
+        if [ -d "/opt/X11/lib" ]; then
+          echo "/opt/X11/lib exists. Skipping xQuartz installation"
+        else
+          echo "::group::Installing XQuartz"
+          echo "Downloading XQuartz..."
+          curl --retry 3 -fLO https://github.com/XQuartz/XQuartz/releases/download/XQuartz-2.8.5/XQuartz-2.8.5.pkg
+          sudo installer -pkg "XQuartz-2.8.5.pkg" -target /
+          rm -f XQuartz-2.8.5.pkg
+          echo "Done installing XQuartz!"
+          echo "::endgroup::"
+        fi
+
+    - shell: bash
+#      if: inputs.fortran
+      run: |
+        if [ -d "/opt/gfortran/bin" ]; then
+          echo "/opt/gfortran/bin exists. Skipping fortran installation"
+        else
+          echo "::group::Installing Fortran"
+          echo "Downloading Fortran..."
+          curl --retry 3 -fsSLO https://github.com/R-macos/gcc-12-branch/releases/download/12.2-darwin-r0.1/gfortran-12.2-universal.pkg
+          sudo installer -pkg "gfortran-12.2-universal.pkg" -target /
+          rm -f gfortran-12.2-universal.pkg
+
+          #Backward compat R-4.2
+          sudo ln -sf /opt/gfortran /usr/local/gfortran
+          sed -i.bak 's|darwin18/8.2.0|darwin20.0/12.2.0|g' $(R RHOME)/etc/Makeconf
+          echo "Done installing Fortran!"
+          echo "::endgroup::"
+        fi
+        echo "/opt/gfortran/bin" >> $GITHUB_PATH
+
+    - shell: bash
+      run: |
+        if pandoc --version 2>/dev/null; then
+          echo "Skipping pandoc installation"
+        else
+          echo "::group::Installing Pandoc"
+          curl --retry 3 -fOL https://github.com/jgm/pandoc/releases/download/2.14.2/pandoc-2.14.2-macOS.pkg
+          sudo installer -pkg pandoc-2.14.2-macOS.pkg -target /
+          rm -f pandoc-2.14.2-macOS.pkg
+          echo "::endgroup::"
+        fi
+
+    - shell: bash
+      run: |
+        echo "::group::Installing CRAN libs bundle"
+        if [ "${{inputs.version}}" = "oldrel" ]; then
+          curl --retry 3 -fsSL https://github.com/autobrew/bundler/releases/download/2022-05-19/cranbundle-20220519-high_sierra.tar.xz -o libs.tar.xz
+          sudo tar -xf libs.tar.xz --strip 1 -C /usr/local/
+          echo "PROJ_LIB=/usr/local/share/proj" >> $GITHUB_ENV
+        else
+          if [ -f "/opt/R/x86_64/bin/pkg-config" ]; then
+            echo "/opt/R/x86_64/bin/pkg-config exists, skipping download"
+          else
+            curl --retry 3 -fsSL https://github.com/r-universe-org/cranlibs/releases/download/2023-08-10/cranlibs.tar.xz -o libs.tar.xz
+            sudo tar -xf libs.tar.xz -C / opt
+            rm -f libs.tar.xz
+          fi
+          PATH="/opt/R/x86_64/bin:$PATH"
+          echo "/opt/R/x86_64/bin" >> $GITHUB_PATH
+          export PKG_CONFIG_PATH="/opt/R/x86_64/lib/pkgconfig:/opt/R/x86_64/share/pkgconfig:/usr/lib/pkgconfig:/opt/X11/lib/pkgconfig:/opt/X11/share/pkgconfig"
+          echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> $GITHUB_ENV
+          echo "PROJ_LIB=/opt/R/x86_64/share/proj" >> $GITHUB_ENV
+        fi
+        echo "Available libs through pkg-config:"
+        pkg-config --list-all
+        echo "Done installing CRAN bundle!"
+        echo "::endgroup::"
