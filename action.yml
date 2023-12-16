@@ -77,7 +77,7 @@ runs:
 
           #Backward compat R-4.2
           sudo ln -sf /opt/gfortran /usr/local/gfortran
-          sed -i.bak 's|darwin18/8.2.0|darwin20.0/12.2.0|g' $(R RHOME)/etc/Makeconf
+          #sed -i.bak 's|darwin18/8.2.0|darwin20.0/12.2.0|g' $(R RHOME)/etc/Makeconf  
           echo "Done installing Fortran!"
           echo "::endgroup::"
         fi
