@@ -23,7 +23,7 @@ runs:
           /opt/X11
           /opt/gfortran
           /opt/R/x86_64
-        key: ${{ runner.os }}-${{ inputs.version }}
+        key: ${{ runner.os }}-${{ inputs.version }}-2
     - shell: bash
       run: |
         echo "::group::Removing Homebrew"
@@ -37,16 +37,6 @@ runs:
         echo "Done removing homebrew!"
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         cargo --version
-        echo "::endgroup::"
-
-    - shell: bash
-      run: |
-        echo "::group::Installing static zstd"
-        echo "Reinstalling static zstd (for github actions cache)"
-        curl --retry 3 -fLO https://github.com/autobrew/bundler/releases/download/zstd-1.5.5/zstd-1.5.5-universal.tar.xz
-        sudo tar -xf zstd-1.5.5-universal.tar.xz --strip 1 -C /usr/local/
-        rm -f zstd-1.5.5-universal.tar.xz
-        zstd --version
         echo "::endgroup::"
 
     - shell: bash
@@ -106,7 +96,7 @@ runs:
           if [ -f "/opt/R/x86_64/bin/pkg-config" ]; then
             echo "/opt/R/x86_64/bin/pkg-config exists, skipping download"
           else
-            curl --retry 3 -fsSL https://github.com/r-universe-org/cranlibs/releases/download/2023-08-10/cranlibs.tar.xz -o libs.tar.xz
+            curl --retry 3 -fsSL https://github.com/r-universe-org/cranlibs/releases/download/2023-12-18/cranlibs-x86_64.tar.xz -o libs.tar.xz
             sudo tar -xf libs.tar.xz -C / opt
             rm -f libs.tar.xz
           fi
