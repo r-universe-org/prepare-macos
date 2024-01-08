@@ -25,7 +25,7 @@ runs:
           /opt/R/x86_64
           /opt/R/arm64
           /opt/R-4.3-arm64
-        key: ${{ runner.os }}-${{ inputs.version }}-9
+        key: ${{ runner.os }}-${{ inputs.version }}-12
 
     - shell: bash
       run: |
@@ -133,12 +133,13 @@ runs:
           done
 
           # Create shims to help some packages
-          if [ -f "/opt/R/arm64/bin/arch" ]; then
+          if [ -f "/opt/R/arm64/bin/cargo" ]; then
             echo "Shims already exist"
           else
             curl -sSL https://github.com/r-universe-org/prepare-macos/raw/master/shims/arch.sh > /opt/R/arm64/bin/arch
             curl -sSL https://github.com/r-universe-org/prepare-macos/raw/master/shims/uname.sh > /opt/R/arm64/bin/uname
-            chmod +x /opt/R/arm64/bin/uname /opt/R/arm64/bin/arch
+            curl -sSL https://github.com/r-universe-org/prepare-macos/raw/master/shims/cargo.sh > /opt/R/arm64/bin/cargo
+            chmod +x /opt/R/arm64/bin/uname /opt/R/arm64/bin/arch /opt/R/arm64/bin/cargo
           fi
 
         fi
