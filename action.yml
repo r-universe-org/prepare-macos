@@ -25,7 +25,7 @@ runs:
           /opt/R/x86_64
           /opt/R/arm64
           /opt/R-4.3-arm64
-        key: ${{ runner.os }}-${{ inputs.version }}-12
+        key: ${{ runner.os }}-${{ inputs.version }}-14
 
     - shell: bash
       run: |
